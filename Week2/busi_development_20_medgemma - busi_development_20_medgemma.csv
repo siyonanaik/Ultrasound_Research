@@ -1,0 +1,101 @@
+image_id,true_label,predicted_label,raw_response,valid_json,correct,latency,prompt,model_name,model_revision,temperature,do_sample,max_new_tokens
+benign (191).png,benign lesion,normal,"{""label"": ""normal""}",TRUE,FALSE,2.895091069,"Classify this breast ultrasound image as exactly one of:
+normal, benign lesion, malignant lesion, or insufficient image quality.
+
+Return JSON only using this format:
+{""label"": ""<allowed label>""}",google/medgemma-1.5-4b-it,91850547d9f0b2fdd21aa7c5f4f3d1a8a52c243b,,FALSE,60
+benign (117).png,benign lesion,insufficient image quality,"{""label"": ""insufficient image quality""}",TRUE,FALSE,3.095797023,"Classify this breast ultrasound image as exactly one of:
+normal, benign lesion, malignant lesion, or insufficient image quality.
+
+Return JSON only using this format:
+{""label"": ""<allowed label>""}",google/medgemma-1.5-4b-it,91850547d9f0b2fdd21aa7c5f4f3d1a8a52c243b,,FALSE,60
+benign (195).png,benign lesion,insufficient image quality,"{""label"": ""insufficient image quality""}",TRUE,FALSE,3.001989341,"Classify this breast ultrasound image as exactly one of:
+normal, benign lesion, malignant lesion, or insufficient image quality.
+
+Return JSON only using this format:
+{""label"": ""<allowed label>""}",google/medgemma-1.5-4b-it,91850547d9f0b2fdd21aa7c5f4f3d1a8a52c243b,,FALSE,60
+benign (98).png,benign lesion,benign lesion,"{""label"": ""benign lesion""}",TRUE,TRUE,3.028898708,"Classify this breast ultrasound image as exactly one of:
+normal, benign lesion, malignant lesion, or insufficient image quality.
+
+Return JSON only using this format:
+{""label"": ""<allowed label>""}",google/medgemma-1.5-4b-it,91850547d9f0b2fdd21aa7c5f4f3d1a8a52c243b,,FALSE,60
+benign (99).png,benign lesion,benign lesion,"{""label"": ""benign lesion""}",TRUE,TRUE,2.960272277,"Classify this breast ultrasound image as exactly one of:
+normal, benign lesion, malignant lesion, or insufficient image quality.
+
+Return JSON only using this format:
+{""label"": ""<allowed label>""}",google/medgemma-1.5-4b-it,91850547d9f0b2fdd21aa7c5f4f3d1a8a52c243b,,FALSE,60
+benign (412).png,benign lesion,insufficient image quality,"{""label"": ""insufficient image quality""}",TRUE,FALSE,3.072744193,"Classify this breast ultrasound image as exactly one of:
+normal, benign lesion, malignant lesion, or insufficient image quality.
+
+Return JSON only using this format:
+{""label"": ""<allowed label>""}",google/medgemma-1.5-4b-it,91850547d9f0b2fdd21aa7c5f4f3d1a8a52c243b,,FALSE,60
+normal (84).png,normal,normal,"{""label"": ""normal""}",TRUE,TRUE,2.867311387,"Classify this breast ultrasound image as exactly one of:
+normal, benign lesion, malignant lesion, or insufficient image quality.
+
+Return JSON only using this format:
+{""label"": ""<allowed label>""}",google/medgemma-1.5-4b-it,91850547d9f0b2fdd21aa7c5f4f3d1a8a52c243b,,FALSE,60
+malignant (160).png,malignant lesion,insufficient image quality,"{""label"": ""insufficient image quality""}",TRUE,FALSE,3.133148768,"Classify this breast ultrasound image as exactly one of:
+normal, benign lesion, malignant lesion, or insufficient image quality.
+
+Return JSON only using this format:
+{""label"": ""<allowed label>""}",google/medgemma-1.5-4b-it,91850547d9f0b2fdd21aa7c5f4f3d1a8a52c243b,,FALSE,60
+normal (22).png,normal,insufficient image quality,"{""label"": ""insufficient image quality""}",TRUE,FALSE,3.205690195,"Classify this breast ultrasound image as exactly one of:
+normal, benign lesion, malignant lesion, or insufficient image quality.
+
+Return JSON only using this format:
+{""label"": ""<allowed label>""}",google/medgemma-1.5-4b-it,91850547d9f0b2fdd21aa7c5f4f3d1a8a52c243b,,FALSE,60
+benign (208).png,benign lesion,normal,"{""label"": ""normal""}",TRUE,FALSE,2.92631823,"Classify this breast ultrasound image as exactly one of:
+normal, benign lesion, malignant lesion, or insufficient image quality.
+
+Return JSON only using this format:
+{""label"": ""<allowed label>""}",google/medgemma-1.5-4b-it,91850547d9f0b2fdd21aa7c5f4f3d1a8a52c243b,,FALSE,60
+benign (292).png,benign lesion,normal,"{""label"": ""normal""}",TRUE,FALSE,2.913339474,"Classify this breast ultrasound image as exactly one of:
+normal, benign lesion, malignant lesion, or insufficient image quality.
+
+Return JSON only using this format:
+{""label"": ""<allowed label>""}",google/medgemma-1.5-4b-it,91850547d9f0b2fdd21aa7c5f4f3d1a8a52c243b,,FALSE,60
+normal (1).png,normal,insufficient image quality,"{""label"": ""insufficient image quality""}",TRUE,FALSE,3.113697213,"Classify this breast ultrasound image as exactly one of:
+normal, benign lesion, malignant lesion, or insufficient image quality.
+
+Return JSON only using this format:
+{""label"": ""<allowed label>""}",google/medgemma-1.5-4b-it,91850547d9f0b2fdd21aa7c5f4f3d1a8a52c243b,,FALSE,60
+malignant (81).png,malignant lesion,normal,"{""label"": ""normal""}",TRUE,FALSE,2.963232128,"Classify this breast ultrasound image as exactly one of:
+normal, benign lesion, malignant lesion, or insufficient image quality.
+
+Return JSON only using this format:
+{""label"": ""<allowed label>""}",google/medgemma-1.5-4b-it,91850547d9f0b2fdd21aa7c5f4f3d1a8a52c243b,,FALSE,60
+malignant (118).png,malignant lesion,benign lesion,"{""label"": ""benign lesion""}",TRUE,FALSE,3.091080285,"Classify this breast ultrasound image as exactly one of:
+normal, benign lesion, malignant lesion, or insufficient image quality.
+
+Return JSON only using this format:
+{""label"": ""<allowed label>""}",google/medgemma-1.5-4b-it,91850547d9f0b2fdd21aa7c5f4f3d1a8a52c243b,,FALSE,60
+malignant (182).png,malignant lesion,normal,"{""label"": ""normal""}",TRUE,FALSE,3.036466405,"Classify this breast ultrasound image as exactly one of:
+normal, benign lesion, malignant lesion, or insufficient image quality.
+
+Return JSON only using this format:
+{""label"": ""<allowed label>""}",google/medgemma-1.5-4b-it,91850547d9f0b2fdd21aa7c5f4f3d1a8a52c243b,,FALSE,60
+normal (110).png,normal,normal,"{""label"": ""normal""}",TRUE,TRUE,2.988169367,"Classify this breast ultrasound image as exactly one of:
+normal, benign lesion, malignant lesion, or insufficient image quality.
+
+Return JSON only using this format:
+{""label"": ""<allowed label>""}",google/medgemma-1.5-4b-it,91850547d9f0b2fdd21aa7c5f4f3d1a8a52c243b,,FALSE,60
+benign (163).png,benign lesion,normal,"{""label"": ""normal""}",TRUE,FALSE,2.959311962,"Classify this breast ultrasound image as exactly one of:
+normal, benign lesion, malignant lesion, or insufficient image quality.
+
+Return JSON only using this format:
+{""label"": ""<allowed label>""}",google/medgemma-1.5-4b-it,91850547d9f0b2fdd21aa7c5f4f3d1a8a52c243b,,FALSE,60
+malignant (82).png,malignant lesion,insufficient image quality,"{""label"": ""insufficient image quality""}",TRUE,FALSE,3.248627696,"Classify this breast ultrasound image as exactly one of:
+normal, benign lesion, malignant lesion, or insufficient image quality.
+
+Return JSON only using this format:
+{""label"": ""<allowed label>""}",google/medgemma-1.5-4b-it,91850547d9f0b2fdd21aa7c5f4f3d1a8a52c243b,,FALSE,60
+benign (269).png,benign lesion,normal,"{""label"": ""normal""}",TRUE,FALSE,2.925435596,"Classify this breast ultrasound image as exactly one of:
+normal, benign lesion, malignant lesion, or insufficient image quality.
+
+Return JSON only using this format:
+{""label"": ""<allowed label>""}",google/medgemma-1.5-4b-it,91850547d9f0b2fdd21aa7c5f4f3d1a8a52c243b,,FALSE,60
+benign (342).png,benign lesion,benign lesion,"{""label"": ""benign lesion""}",TRUE,TRUE,3.000487414,"Classify this breast ultrasound image as exactly one of:
+normal, benign lesion, malignant lesion, or insufficient image quality.
+
+Return JSON only using this format:
+{""label"": ""<allowed label>""}",google/medgemma-1.5-4b-it,91850547d9f0b2fdd21aa7c5f4f3d1a8a52c243b,,FALSE,60

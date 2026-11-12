@@ -1,0 +1,2553 @@
+Please take a scan of the entire Ultrasound Undergrad Eight Week Briefing, and tell me simpler steps how i need to do this project. Because currently I dont understand anything in it.
+
+
+
+
+
+
+Worked for 1m 33s
+
+
+
+I reviewed the entire briefing, including its diagram and comments. The project is essentially this:
+Test whether an AI model can understand ultrasound images—and whether it knows when an image is too poor to answer safely.
+
+You are evaluating an existing model, not training a medical AI system from scratch.
+What you actually need to build
+Create a Google Colab pipeline that:
+1. Loads ultrasound images.
+2. Sends each image to MedGemma with a fixed question.
+3. Saves the model’s answer.
+4. Compares the answer with the correct label.
+5. Tests what happens when the image quality is deliberately reduced.
+6. Produces tables, graphs, example images, a report, and a presentation.
+The project in simple phases
+Phase 1: Get one example working
+Start with MedGemma and one BUSI breast-ultrasound image.
+
+Ask:
+Classify this breast ultrasound image as normal, benign lesion,
+malignant lesion, or insufficient image quality.
+Return JSON only.
+Expected output:
+{"label": "benign lesion"}
+Your first technical goal is simply:
+Image → MedGemma → JSON answer
+Do not begin with every dataset, model, metric, or image corruption at once.
+Phase 2: Prepare the BUSI dataset
+BUSI is the main dataset. It contains approximately 780 breast-ultrasound images classified as:
+- Normal
+- Benign lesion
+- Malignant lesion
+For each image, record:
+- Image filename
+- Correct class
+- Associated mask, if present
+- Dataset split: development or test
+Create a fixed split:
+- Use the development set while fixing prompts and code.
+- Keep the test set untouched until the experiment is ready.
+- If patient identifiers exist, keep images from the same patient in one split.
+- If they do not, use a fixed stratified image split and state this limitation.
+“Stratified” simply means keeping similar proportions of normal, benign, and malignant images in each split.
+Phase 3: Run clean-image classification
+Run every BUSI test image through exactly the same prompt and model settings.
+
+For every result, save one row containing:
+image_id
+true_label
+model_name
+model_revision
+prompt
+temperature
+raw_response
+parsed_label
+valid_json
+latency
+confidence_proxy
+Never replace or delete the original model response.
+
+Then calculate:
+- Macro F1: calculate F1 for each class and average them equally.
+- Balanced accuracy: average the recall across the classes.
+- Class-wise recall: how many images from each class were correctly identified.
+- Confusion matrix: shows which classes the model confuses.
+- Valid-response rate: how often the model followed the required JSON format.
+- Latency: how long each answer took.
+Phase 4: Test whether it can locate a lesion
+BUSI lesion images come with segmentation masks showing the lesion.
+
+Your steps are:
+1. Convert each mask into one rectangular reference box.
+2. Ask MedGemma for one bounding box.
+3. Require normalised coordinates, for example:
+{
+  "label": "benign lesion",
+  "box": [0.18, 0.24, 0.72, 0.81]
+}
+4. Compare the predicted box with the reference box using IoU.
+IoU means how much the two boxes overlap:
+- 1.0 = perfect overlap
+- 0.0 = no overlap
+- Report the percentage reaching at least 0.25
+- Report the percentage reaching at least 0.50
+If MedGemma cannot consistently return usable coordinates, that is a valid research finding. Do not invent locations from its written description.
+Phase 5: Damage copies of the images
+Create controlled, degraded copies of the clean BUSI test images.
+
+Use these five corruption types:
+- Brightness and contrast changes
+- Blur and downsampling
+- JPEG compression
+- Cropping part of the field of view
+- Adding an occlusion band or text overlay
+Create four or five severity levels for each type. Keep the clean original images unchanged and save the random seed so the corruptions can be recreated.
+
+Then rerun the same classification experiment.
+
+You are checking:
+- Does accuracy decrease as damage increases?
+- Does the model become less confident?
+- Does it choose “insufficient image quality” more often?
+- Does it sometimes remain confidently wrong?
+The brief specifically says to call these “controlled image perturbations,” not simulated physical ultrasound artefacts.
+Phase 6: Perform the smaller CAMUS study
+CAMUS contains heart-ultrasound images. This is an external check rather than the main experiment.
+
+Use a fixed selection of frames and ask the model to identify:
+- A2C: apical two-chamber view
+- A4C: apical four-chamber view
+- Insufficient image quality
+Compare performance on:
+- Ordinary-quality images
+- Expert-marked poor-quality images
+The important question is not simply whether it identifies every heart view correctly. You are testing whether it becomes appropriately uncertain or refuses to answer when image quality is poor.
+
+If extracting CAMUS frames becomes difficult, use a small, manually checked collection of exported frames. You do not need to implement full video analysis.
+Phase 7: Review the mistakes manually
+Inspect every high-confidence incorrect answer.
+
+Assign one main reason to each error:
+- Anatomy confusion
+- Artefact or context confusion
+- Unsupported hallucination
+- Wrong classification
+- Poor bounding-box localisation
+- Failure to abstain on a bad image
+Select representative examples for your report.
+Phase 8: Write and present the results
+Prepare:
+- A clean repository or shared project folder
+- Five reproducible Colab notebooks
+- Requirements file
+- Saved prompts
+- Dataset manifests and splits
+- Raw model responses
+- Processed result tables
+- Figures
+- A 4–6 page technical report
+- A 10-minute presentation
+- A 5-minute demonstration
+- Approximately 10 slides
+Your simplified eight-week plan
+Week 1: Make one image work
+- Read the five suggested papers at a high level.
+- Download BUSI.
+- Create the project folders.
+- Create 00_setup.ipynb.
+- Load MedGemma in Colab.
+- Successfully run one BUSI image.
+- Write a one-page literature summary.
+Do not spend more than two days fighting model-loading problems. Use 4-bit loading or a smaller open VLM if necessary, and document the change.
+Week 2: Organise the experiment
+- Build the BUSI manifest.
+- Create and save the fixed data split.
+- Save the exact prompt in a text file.
+- Define the CSV or Parquet output columns.
+- Test the pipeline on approximately 20 development images.
+- Fix JSON parsing and logging.
+- Freeze the prompt and settings.
+Week 3: Run BUSI classification
+- Run all clean BUSI test images.
+- Save every response.
+- Calculate classification metrics.
+- Generate a confusion matrix.
+- Check invalid or missing responses.
+Week 4: Run lesion localisation
+- Convert reference masks into boxes.
+- Ask the model for predicted boxes.
+- Calculate IoU.
+- Save at least 10 examples showing reference and predicted boxes.
+If coordinate output is unreliable, document that limitation and move on.
+Week 5: Test corrupted images
+- Implement the five corruption types.
+- Add four or five severity levels.
+- Save the corruption settings and random seed.
+- Rerun BUSI.
+- Plot performance against severity.
+- Analyse confidence and abstention.
+Week 6: Run CAMUS
+- Export a fixed collection of A2C and A4C frames.
+- Separate ordinary and poor-quality images.
+- Run view classification.
+- Compare accuracy and abstention between quality groups.
+Week 7: Study the failures
+- Review high-confidence errors.
+- Label each error using the failure categories.
+- Compare MedGemma with one similar general-purpose VLM if time permits.
+- Choose useful examples for the final report.
+The second model is helpful, but completing the MedGemma evaluation properly is more important.
+Week 8: Package everything
+- Clean the repository.
+- Confirm every notebook runs from a fresh Colab session.
+- Produce the three required figures.
+- Write the technical report.
+- Prepare approximately 10 slides.
+- Practise the presentation and pipeline demonstration.
+Recommended notebook and folder structure
+Ultrasound_Project-Siyona/
+├── notebooks/
+│   ├── 00_setup.ipynb
+│   ├── 01_data.ipynb
+│   ├── 02_inference.ipynb
+│   ├── 03_metrics.ipynb
+│   └── 04_figures.ipynb
+├── prompts/
+│   ├── busi_classification.txt
+│   ├── busi_grounding.txt
+│   └── camus_view.txt
+├── splits/
+│   ├── busi_development.csv
+│   ├── busi_test.csv
+│   └── camus_test.csv
+├── results/
+│   ├── raw/
+│   ├── processed/
+│   └── figures/
+├── src/
+│   ├── data.py
+│   ├── inference.py
+│   ├── corruptions.py
+│   ├── grounding.py
+│   └── metrics.py
+├── requirements.txt
+└── README.md
+The three essential final figures
+You need at least:
+1. Clean versus corrupted performance
+   A graph showing how performance falls as image damage increases.
+2. Calibration or risk-coverage graph
+   A graph showing whether confidence corresponds to correctness, or whether performance improves when uncertain cases are rejected.
+3. Qualitative failure panel
+   Several image examples showing the true answer, model answer, and reference/predicted boxes.
+Important restrictions
+- This is a research evaluation, not a clinical diagnostic system.
+- Do not make claims about clinical safety or superiority over clinicians.
+- Use only public, de-identified data.
+- Do not upload patient, confidential, or personal data.
+- Do not tune prompts using the final test set.
+- Do not change the prompt halfway through the final experiment.
+- Do not use web-scraped ultrasound images.
+- Do not evaluate a specialised ultrasound model if its training data may include your test dataset.
+- Preserve dataset licences and citations.
+- Keep raw images from appearing publicly in notebook output.
+What you should do first
+Your immediate checklist is only:
+1. Create the folder structure.
+2. Download BUSI and read its licence.
+3. Create a dataset manifest listing every image and label.
+4. Open a Colab notebook.
+5. Load MedGemma.
+6. run one image through it.
+7. Save both the raw answer and parsed label.
+8. Repeat this on 20 development images.
+Once that works reliably, you will have the foundation for almost the entire project.
+
+Source reviewed: :codex-file-citation{path="/Users/siyonanaik/Desktop/UltrasoundVSC/Ultrasound_VLM_UGE_Project_Brief_edited.docx" purpose="source"}
+
+
+What is a mask? Also model settings for MedGemma right? How do i connect medgemma to colab? What is a one page literature note? and the "Classify this breast ultrasound image as normal, benign lesion,
+malignant lesion, or insufficient image quality.
+Return JSON only." is that like a command or like am i just typing it like how i type in codex like an LLM? and when it returns a json file, how does the json file open like o i have to download or is it on command line or is it like a chat just like chatgpt?
+
+also how to use the datasets? dataset links: BUSI: https://www.kaggle.com/datasets/subhajournal/busi-breast-ultrasound-images-dataset 
+
+
+CAMUS: https://humanheart-project.creatis.insa-lyon.fr/database/#collection/6373703d73e9f0047faa1bc8 
+
+also you said mark for each image, but if there are 780 images so then i mark for all? this thing: For every result, save one row containing:
+image_id
+true_label
+model_name
+model_revision
+prompt
+temperature
+raw_response
+parsed_label
+valid_json
+latency
+confidence_proxy
+
+
+
+
+
+
+
+Worked for 1m 24s
+
+
+
+Yes, the “model settings” are the settings used when running MedGemma. And the classification text is a prompt—very similar to typing a question into ChatGPT—but your Colab code sends it automatically with each image.
+1. What is a mask?
+A mask is an image that marks exactly where an object is located.
+
+For a BUSI breast-ultrasound image, you may have:
+benign (12).png
+benign (12)_mask.png
+The first file is the real ultrasound image. The mask is usually a black-and-white image:
+- Black pixels: outside the lesion
+- White pixels: inside the lesion
+Conceptually:
+Ultrasound image           Mask
+
+[breast tissue]            [black background]
+[visible lesion]           [white lesion area]
+[breast tissue]            [black background]
+The mask was created by an expert. It is your reference answer for lesion location.
+
+For the classification experiment, you give MedGemma only the ultrasound image—not the mask. Later, you use the mask to check whether MedGemma located the lesion correctly.
+
+You can also convert the irregular white mask into a simple rectangle:
+Mask → smallest rectangle surrounding the white area
+That rectangle is your reference bounding box.
+2. What are MedGemma’s “model settings”?
+They are the configuration values used when MedGemma produces an answer.
+
+For this experiment, the important settings are:
+MODEL_ID = "google/medgemma-1.5-4b-it"
+MAX_NEW_TOKENS = 60
+DO_SAMPLE = False
+TEMPERATURE = None
+Meanings:
+- MODEL_ID: the exact model and version being tested.
+- max_new_tokens: maximum answer length.
+- do_sample=False: use greedy decoding rather than randomly sampling words.
+- temperature: controls randomness. It has no practical effect when sampling is disabled.
+- device_map="auto": lets the library put the model on the available GPU.
+- load_in_4bit=True: reduces GPU memory usage.
+The important scientific rule is consistency: every image in a particular experiment must use the same settings.
+
+MedGemma 1.5’s current default generation configuration uses greedy decoding. Google also states that the model is primarily designed for single-image tasks and that its output requires independent verification. MedGemma 1.5 model card
+3. How do I connect MedGemma to Colab?
+You do not connect Colab to a MedGemma chatbot. Colab downloads the MedGemma model from Hugging Face and runs it using Python.
+Before opening Colab
+1. Create a Hugging Face account.
+2. Open the MedGemma 1.5 4B page.
+3. Log in.
+4. Read and accept the Health AI Developer Foundations terms.
+5. Open your Hugging Face settings.
+6. Create a read-access token.
+7. Do not paste that token into a public notebook.
+In Colab
+Select:
+Runtime → Change runtime type → T4 GPU
+Then add your Hugging Face token through:
+Left sidebar → Secrets → Add new secret
+Name it:
+HF_TOKEN
+Enable notebook access for that secret.
+Cell 1: Install the software
+!pip -q install -U transformers accelerate bitsandbytes huggingface_hub pillow pandas
+If Colab asks you to restart the runtime after installation, restart it and continue from Cell 2.
+Cell 2: Log in safely
+from google.colab import userdata
+from huggingface_hub import login
+
+login(token=userdata.get("HF_TOKEN"))
+Cell 3: Load MedGemma
+This uses 4-bit loading to reduce memory requirements:
+import torch
+
+from transformers import (
+    BitsAndBytesConfig,
+    pipeline,
+)
+
+MODEL_ID = "google/medgemma-1.5-4b-it"
+
+quantization_config = BitsAndBytesConfig(
+    load_in_4bit=True,
+    bnb_4bit_compute_dtype=torch.float16,
+)
+
+medgemma = pipeline(
+    task="image-text-to-text",
+    model=MODEL_ID,
+    device_map="auto",
+    model_kwargs={
+        "quantization_config": quantization_config,
+    },
+)
+
+print("MedGemma loaded")
+The first run takes time because Colab must download the model.
+Cell 4: Open one image
+from PIL import Image
+from IPython.display import display
+
+image_path = "/content/data/busi/benign/benign (12).png"
+
+image = Image.open(image_path).convert("RGB")
+display(image)
+Change the path to an image that actually exists in your downloaded dataset.
+Cell 5: Send the image and prompt to MedGemma
+PROMPT = """
+Classify this breast ultrasound image as exactly one of:
+normal, benign lesion, malignant lesion, or insufficient image quality.
+
+Return JSON only using this schema:
+{"label": "<allowed label>"}
+"""
+
+messages = [
+    {
+        "role": "user",
+        "content": [
+            {"type": "image", "image": image},
+            {"type": "text", "text": PROMPT},
+        ],
+    }
+]
+
+output = medgemma(
+    text=messages,
+    max_new_tokens=60,
+    do_sample=False,
+)
+
+output
+Google’s official example uses this same overall image-text-to-text pattern: an image and text are placed together in a user message and passed to a Transformers pipeline. Official MedGemma usage example
+4. Is the prompt like talking to ChatGPT?
+Yes, conceptually.
+
+When using ChatGPT, you manually do this:
+Upload image
+Type question
+Read answer
+Your Colab code does this:
+Python opens image
+Python attaches prompt
+Python sends both to MedGemma
+Python receives answer
+Python saves answer
+For one image, you can display the result like a conversation. For 780 images, your code uses a loop and sends the same prompt automatically.
+
+The \ symbols in your message are not part of the prompt. They were just formatting characters. Write the prompt normally:
+prompt = """
+Classify this breast ultrasound image as normal, benign lesion,
+malignant lesion, or insufficient image quality.
+Return JSON only.
+"""
+A clearer version is:
+prompt = """
+Classify this breast ultrasound image as exactly one of:
+normal, benign lesion, malignant lesion, or insufficient image quality.
+
+Return JSON only:
+{"label": "<allowed label>"}
+"""
+5. Does MedGemma return a JSON file?
+Not automatically. It normally returns text that looks like JSON:
+{"label": "benign lesion"}
+Initially, you will see this below the Colab code cell, like normal Python output.
+
+It is still just text. Your program then converts that text into a Python object:
+import json
+
+raw_response = '{"label": "benign lesion"}'
+
+parsed = json.loads(raw_response)
+
+print(parsed)
+print(parsed["label"])
+Output:
+{'label': 'benign lesion'}
+benign lesion
+You usually do not create 780 separate JSON files. Instead, you place each result into one large CSV or Parquet table.
+
+For example:
+image_id	true_label	parsed_label	valid_json
+normal (1).png	normal	normal	True
+benign (12).png	benign lesion	benign lesion	True
+malignant (7).png	malignant lesion	benign lesion	True
+
+
+At the end, save the complete table:
+results_df.to_csv("/content/results/busi_results.csv", index=False)
+You can then:
+- View it directly in Colab
+- Open it with pandas
+- Download it
+- Save it to Google Drive
+- Open it later in Excel or Google Sheets
+6. How do I download BUSI?
+First, open the BUSI Kaggle page, sign in, and check its description, source and licence.
+
+One simple Colab approach is KaggleHub.
+Download in Colab
+!pip -q install -U kagglehub
+import kagglehub
+
+busi_path = kagglehub.dataset_download(
+    "subhajournal/busi-breast-ultrasound-images-dataset",
+    output_dir="/content/data/busi",
+)
+
+print("Downloaded to:", busi_path)
+Kaggle documents kagglehub.dataset_download() as its Python method for downloading datasets. Official KaggleHub documentation
+
+If Kaggle asks for authentication, log into Kaggle and follow its token instructions. Alternatively, download the ZIP manually from the webpage, put it in Google Drive and unzip it in Colab.
+Check the downloaded files
+import os
+
+for root, directories, files in os.walk("/content/data/busi"):
+    print(root, "contains", len(files), "files")
+Then examine a small sample:
+from pathlib import Path
+
+all_pngs = list(Path("/content/data/busi").rglob("*.png"))
+
+for path in all_pngs[:20]:
+    print(path)
+7. How do I tell images from masks?
+A basic rule is:
+from pathlib import Path
+
+all_pngs = list(Path("/content/data/busi").rglob("*.png"))
+
+mask_paths = [
+    path for path in all_pngs
+    if "_mask" in path.stem.lower()
+]
+
+image_paths = [
+    path for path in all_pngs
+    if "_mask" not in path.stem.lower()
+]
+
+print("Ultrasound images:", len(image_paths))
+print("Mask files:", len(mask_paths))
+Do not assume the number of PNG files equals the number of ultrasound cases. Masks are additional files, and some images may have more than one mask.
+8. Do I manually mark all 780 images?
+No. You do not manually type a row for every image.
+
+The correct label is normally obtained automatically from the folder or filename:
+normal/...      → normal
+benign/...      → benign lesion
+malignant/...   → malignant lesion
+Your code loops through all images, runs MedGemma and adds one row automatically.
+
+Simplified example:
+results = []
+
+for image_path in image_paths:
+    if "normal" in str(image_path).lower():
+        true_label = "normal"
+    elif "benign" in str(image_path).lower():
+        true_label = "benign lesion"
+    elif "malignant" in str(image_path).lower():
+        true_label = "malignant lesion"
+    else:
+        continue
+
+    # Open image
+    image = Image.open(image_path).convert("RGB")
+
+    # Run model here
+    raw_response = run_medgemma(image)
+
+    # Parse response here
+    parsed_label, valid_json = parse_response(raw_response)
+
+    # Automatically add one result row
+    results.append({
+        "image_id": image_path.name,
+        "true_label": true_label,
+        "model_name": MODEL_ID,
+        "model_revision": "recorded revision",
+        "prompt": PROMPT,
+        "temperature": 0,
+        "raw_response": raw_response,
+        "parsed_label": parsed_label,
+        "valid_json": valid_json,
+        "latency": None,
+        "confidence_proxy": None,
+    })
+Then:
+import pandas as pd
+
+results_df = pd.DataFrame(results)
+results_df.to_csv("/content/results/busi_results.csv", index=False)
+
+results_df.head()
+So:
+- The dataset supplies the true labels.
+- MedGemma supplies the predicted labels.
+- Your program records both.
+- You manually inspect only selected failures later.
+For the first dry run, process only approximately 20 images. Once everything works correctly, run the full test split.
+9. Will there be exactly 780 rows?
+Not necessarily.
+
+You create one row for every combination of:
+image × model × prompt version × corruption condition
+Examples:
+- One clean image tested once with MedGemma = one row.
+- The same image tested with blur level 1 = another row.
+- The same image tested with blur level 2 = another row.
+- The same image tested with another model = another row.
+Therefore, the final results table could contain thousands of rows.
+
+Add these useful columns later:
+dataset
+split
+corruption_type
+severity
+random_seed
+For example:
+image_id	condition	severity	true_label	prediction
+benign (12).png	clean	0	benign	benign
+benign (12).png	blur	1	benign	benign
+benign (12).png	blur	2	benign	insufficient quality
+benign (12).png	blur	3	benign	malignant
+
+
+10. How do I use CAMUS?
+Do not start CAMUS yet. Complete the basic BUSI pipeline first.
+
+Later:
+1. Open the CAMUS collection.
+2. Follow the collection’s access and usage terms.
+3. Download the full collection or selected folders using the collection menu.
+4. Identify A2C and A4C acquisitions.
+5. Extract only the end-diastolic and end-systolic frames you need.
+6. Record the expert-provided image-quality category.
+7. Export those frames to PNG for MedGemma.
+8. Create a CAMUS manifest with:
+   - Patient ID
+   - View: A2C or A4C
+   - Frame: ED or ES
+   - Quality category
+   - Image path
+The Human Heart Project’s instructions say that an entire collection can be downloaded from the collection-actions menu, while selected folders can be downloaded through the checked-actions menu. Official CAMUS platform FAQ
+
+CAMUS files may require more conversion work than BUSI. That is why the briefing schedules CAMUS for Week 6.
+11. What is a one-page literature note?
+It is a short summary proving that you read and understood the most important background research. It is not a full essay.
+
+Use this structure:
+Title
+Literature Note on Vision Language Models for Ultrasound Evaluation
+Project question
+Two or three sentences explaining what you are testing.
+Papers reviewed
+For each paper, write approximately three bullets:
+- What problem did the paper study?
+- What data/model did it use?
+- What finding or limitation matters to your project?
+What the literature suggests
+One short paragraph explaining:
+- VLMs may recognise medical image content.
+- Ultrasound introduces unusual quality and interpretation difficulties.
+- Good-looking example outputs are not sufficient evidence.
+- Reliability, abstention and reproducibility need to be measured.
+How this affects your experiment
+One short paragraph explaining why you will:
+- Use fixed prompts
+- Keep an untouched test set
+- Measure both classification and image-quality refusal
+- Save raw outputs
+- Test controlled image degradation
+- Avoid clinical claims
+One page is normally around 400–600 words, depending on formatting.
+Your best next action
+Do only this initially:
+1. Accept the MedGemma terms on Hugging Face.
+2. Create a Colab with a T4 GPU.
+3. Add your HF_TOKEN through Colab Secrets.
+4. Load MedGemma.
+5. Download BUSI.
+6. Display one ultrasound image.
+7. Send that one image and the fixed prompt to MedGemma.
+8. Look at the raw output.
+That single-image result is your first milestone.
+
+
+Okay wait lets go step by step, one thing at a time, i am at step 6 under the 3rd medgemma colab thing.
+Create a read-access token.
+
+how? its asking for token name, what is the name supposed to be like? then what token type do i select between fine grained, read and write?
+
+
+
+
+
+
+Use:
+- Token name: medgemma-colab
+- Token type: Read
+The name is only a label to help you remember what the token is for—you can choose any name. Read access is sufficient because Colab only needs to download MedGemma. You do not need Write or Fine-grained permissions.
+
+Then:
+1. Click Create token.
+2. Copy the token immediately. It begins with hf_.
+3. Keep it private—do not paste it in this chat or directly into a shared Colab notebook.
+4. Leave the Hugging Face page open or save the token temporarily somewhere secure.
+Once you have copied it, the next step will be adding it to Colab Secrets under the name HF_TOKEN.
+
+
+okay, do i make a new notebook in colab? named what
+
+
+
+
+
+
+Yes, create a new Google Colab notebook.
+
+Name it:
+00_setup.ipynb
+To rename it, click the notebook name at the top-left.
+
+This notebook will be used to:
+- Connect Colab to Hugging Face
+- Load MedGemma
+- Confirm that the GPU works
+- Test MedGemma on one image
+Once it is named, tell me and we’ll add the Hugging Face token to Colab Secrets.
+
+
+yup how to
+
+
+
+
+
+
+In your Colab notebook:
+1. Look at the left sidebar and click the key icon 🔑 called Secrets.
+2. Click Add new secret.
+3. Under Name, enter exactly:
+HF_TOKEN
+4. Under Value, paste the Hugging Face token beginning with hf_.
+5. Turn on Notebook access using the switch beside the secret.
+Do not paste the token into a code cell or send it here.
+
+Once HF_TOKEN appears in Secrets with notebook access enabled, tell me and we’ll switch Colab to a GPU.
+
+
+how do i check whethe the token is being used
+
+
+
+
+
+
+Run this in a new Colab code cell:
+from google.colab import userdata
+
+token = userdata.get("HF_TOKEN")
+
+if token:
+    print("HF_TOKEN is available to this notebook.")
+else:
+    print("HF_TOKEN was not found.")
+This checks the token without displaying it.
+
+Then verify that Hugging Face accepts it:
+!pip -q install -U huggingface_hub
+from huggingface_hub import login, whoami
+
+login(token=token)
+account = whoami()
+
+print("Logged into Hugging Face as:", account["name"])
+If your Hugging Face username appears, the token is working. Do not print the token variable itself.
+
+
+no i mean, theres no option to press done after adding the secret key, do i just press the cross then
+
+
+
+
+
+
+Yes. Colab saves the secret automatically.
+
+Make sure:
+- Name is HF_TOKEN
+- The token value is pasted
+- Notebook access is switched on
+Then press the X to close the Secrets panel. There is no Done or Save button.
+
+
+okay next
+
+
+
+
+
+
+Now enable the GPU:
+1. At the top of Colab, click Runtime.
+2. Select Change runtime type.
+3. Under Hardware accelerator, choose T4 GPU.
+4. Click Save.
+Then run this code in the first cell:
+import torch
+
+print("GPU available:", torch.cuda.is_available())
+
+if torch.cuda.is_available():
+    print("GPU:", torch.cuda.get_device_name(0))
+You should see something similar to:
+GPU available: True
+GPU: Tesla T4
+Tell me what output you get.
+
+
+Same output
+
+
+
+
+
+
+Great—your GPU is working.
+
+In a new cell, install the required libraries:
+!pip -q install -U transformers accelerate bitsandbytes huggingface_hub pillow
+Run the cell and wait for it to finish. Yellow dependency warnings are usually okay, but if you see a red error, copy the error here.
+
+
+its not showing anything
+
+
+
+
+
+
+That is probably successful. The -q means “quiet,” so Colab hides normal installation messages.
+
+Check the left side of the cell:
+- If the spinning circle has stopped and a number such as [2] appears, it finished.
+- If the circle is still spinning, wait.
+- A red error message would mean it failed.
+Now run this in a new cell:
+import transformers
+import accelerate
+import bitsandbytes
+import huggingface_hub
+
+print("Installation successful")
+print("Transformers version:", transformers.__version__)
+If it prints Installation successful, everything is installed.
+
+
+next
+
+
+
+
+
+
+Now connect Colab to Hugging Face. Run this in a new cell:
+from google.colab import userdata
+from huggingface_hub import login, whoami
+
+token = userdata.get("HF_TOKEN")
+login(token=token)
+
+account = whoami()
+print("Logged in as:", account["name"])
+You should see your Hugging Face username. Do not share the token if an error accidentally displays it.
+
+
+isnt the token name medgemma-colab? why HF_TOKEN
+
+
+
+
+
+
+They are two different names:
+- medgemma-colab is the token’s descriptive name on Hugging Face.
+- HF_TOKEN is the secret’s name inside Google Colab.
+The actual value stored under HF_TOKEN is the long code beginning with hf_.
+
+So this is correct:
+token = userdata.get("HF_TOKEN")
+It tells Colab: “Retrieve the secret stored under the name HF_TOKEN.” It does not refer to the token’s Hugging Face display name.
+
+
+it just logged in and showed my usernme now when i ranthe cell
+
+
+
+
+
+
+Good—your token works and Colab is connected to Hugging Face.
+
+Before loading MedGemma, confirm that you accepted its usage terms:
+1. Open the MedGemma 1.5 4B page.
+2. Make sure you are logged into the same Hugging Face account.
+3. If you see a button asking you to agree, acknowledge, or access the repository, click it and accept the terms.
+4. If you can already see the model’s Files and versions tab, access is likely enabled.
+Once that is done, tell me, and we’ll load MedGemma into the T4 GPU.
+
+
+You have been granted access to this model gated model, i had clicked smtg
+
+
+
+
+
+
+Perfect—you now have access.
+
+Run this in a new Colab cell to load MedGemma:
+import torch
+from transformers import BitsAndBytesConfig, pipeline
+
+MODEL_ID = "google/medgemma-1.5-4b-it"
+
+quantization_config = BitsAndBytesConfig(
+    load_in_4bit=True,
+    bnb_4bit_compute_dtype=torch.float16,
+)
+
+medgemma = pipeline(
+    task="image-text-to-text",
+    model=MODEL_ID,
+    device_map="auto",
+    model_kwargs={
+        "quantization_config": quantization_config,
+    },
+)
+
+print("MedGemma loaded successfully")
+This may take several minutes because it is downloading the model. You should see download progress bars. Keep the Colab tab open.
+
+If you get a red error, send me the complete error message.
+
+
+ImportError                               Traceback (most recent call last)&#x20;
+
+/tmp/ipykernel_697/975746121.py in <cell line: 0>()&#x20;&#x20;     1 import torch ----> 2 from transformers import BitsAndBytesConfig, pipeline&#x20;&#x20;     3 &#x20;&#x20;     4 MODEL_ID = "google/medgemma-1.5-4b-it"&#x20;&#x20;     5  &#x20;
+15 frames
+/usr/local/lib/python3.13/dist-packages/PIL/ImageText.py in <module>&#x20;&#x20;     6 &#x20;&#x20;     7 from . import ImageFont ----> 8 from ._typing import _Ink&#x20;&#x20;     9 &#x20;&#x20;    10  &#x20;
+
+ImportError: cannot import name '_Ink' from 'PIL._typing' (/usr/local/lib/python3.13/dist-packages/PIL/_typing.py)&#x20;
+
+--------------------------------------------------------------------------- NOTE: If your import is failing due to a missing package, you can manually install dependencies using either !pip or !apt.  To view examples of installing some common dependencies, click the "Open Examples" button below. --------------------------------------------------------------------
+
+
+
+
+
+
+This is a Pillow version conflict caused by upgrading packages while the old Pillow version was still loaded in memory. Your token and MedGemma access are fine.
+
+Restart the Colab session:
+1. Click Runtime.
+2. Click Restart session.
+3. Confirm the restart.
+4. Do not run the installation cell again yet.
+5. Rerun the Hugging Face login cell:
+from google.colab import userdata
+from huggingface_hub import login, whoami
+
+token = userdata.get("HF_TOKEN")
+login(token=token)
+
+print("Logged in as:", whoami()["name"])
+Then rerun the MedGemma loading cell. Restarting makes Colab use the newly installed Pillow version consistently.
+
+
+MedGemma loaded successfully
+
+
+
+
+
+
+Excellent—MedGemma is now running on your Colab GPU.
+
+Next, upload one BUSI ultrasound image for the first test:
+1. Click the folder icon on Colab’s left sidebar.
+2. Click the Upload to session storage icon.
+3. Select one actual ultrasound image from BUSI—not a file containing _mask in its name.
+4. Wait for it to appear under /content/.
+Then right-click the uploaded image, select Copy path, and keep that path. It should resemble:
+/content/benign (1).png
+Tell me the filename after it is uploaded, but do not run the model yet.
+
+
+okay i havent actually downloaded the dataset https://www.kaggle.com/datasets/subhajournal/busi-breast-ultrasound-images-dataset
+
+how to upload do i download as zip
+
+
+
+
+
+
+Yes. For this first test, download the ZIP to your computer:
+1. Open the BUSI Kaggle page.
+2. Click Download near the top-right.
+3. Kaggle downloads a .zip file.
+4. Unzip it on your computer.
+5. Open the extracted folders and find normal, benign, or malignant.
+6. Choose one .png image whose filename does not contain _mask.
+For example, choose:
+benign (1).png
+Do not choose:
+benign (1)_mask.png
+Then upload only that one image to Colab using the folder icon → Upload to session storage. We’ll handle uploading the complete dataset later.
+
+
+bro which folder icon
+
+
+
+
+
+
+On the far-left edge of the Colab screen, there is a vertical toolbar.
+
+Click the small folder-shaped icon 📁. It is usually below the search {x} and key 🔑 icons.
+
+That opens the Files panel. At the top of that panel:
+1. Click the Upload icon—it looks like a page with an upward arrow.
+2. Select one ultrasound .png file from your computer.
+3. If Colab warns that uploaded files will be deleted when the runtime resets, click OK.
+The uploaded file should appear inside the content folder. If you cannot see the left toolbar, click the small > arrow in the upper-left to expand it.
+
+
+done it appears there
+
+
+
+
+
+
+Great. Now right-click the uploaded image in Colab’s Files panel and select Copy path.
+
+Create a new code cell and paste the path between the quotation marks:
+from PIL import Image
+from IPython.display import display
+
+image_path = "/content/your-image-name.png"
+
+image = Image.open(image_path).convert("RGB")
+display(image)
+Replace only this part:
+/content/your-image-name.png
+Run the cell. You should see the ultrasound image displayed below it.
+
+
+next
+
+
+
+
+
+
+Now send the image and classification prompt to MedGemma.
+
+Run this in a new cell:
+PROMPT = """
+Classify this breast ultrasound image as exactly one of:
+normal, benign lesion, malignant lesion, or insufficient image quality.
+
+Return JSON only using this format:
+{"label": "<allowed label>"}
+"""
+
+messages = [
+    {
+        "role": "user",
+        "content": [
+            {"type": "image", "image": image},
+            {"type": "text", "text": PROMPT},
+        ],
+    }
+]
+
+output = medgemma(
+    text=messages,
+    max_new_tokens=60,
+    do_sample=False,
+)
+
+print(output)
+It may take a little while on the first run. Send me what it prints—even if the output looks messy. Don’t include any token or private information.
+
+
+how do i tell whether its done running
+
+
+
+
+
+
+Look at the left side of the code cell:
+- A spinning circle means it is still running.
+- A square stop button means it is still running.
+- When it finishes, the spinner/stop button disappears and a cell number such as [7] appears.
+- The result should appear below the cell.
+You may also see GPU activity or download progress bars. The first inference can take a few minutes.
+
+If it has been running for more than about five minutes, tell me what is currently displayed beneath the cell.
+
+
+it shows, a tick, 6 seconds, and its not running anymore 
+
+[transformers] Kwargs passed to processor.__call__ have to be in processor_kwargs dict, not in **kwargs
+[transformers] Keyword argument do_sample is not a valid argument for this processor and will be ignored.
+[{'input_text': [{'role': 'user', 'content': [{'type': 'image', 'image': <PIL.Image.Image image mode=RGB size=562x471 at 0x7A95C5ECF770>}, {'type': 'text', 'text': '\nClassify this breast ultrasound image as exactly one of:\nnormal, benign lesion, malignant lesion, or insufficient image quality.\n\nReturn JSON only using this format:\n{"label": "<allowed label>"}\n'}]}], 'generated_text': [{'role': 'user', 'content': [{'type': 'image', 'image': <PIL.Image.Image image mode=RGB size=562x471 at 0x7A95C5ECF770>}, {'type': 'text', 'text': '\nClassify this breast ultrasound image as exactly one of:\nnormal, benign lesion, malignant lesion, or insufficient image quality.\n\nReturn JSON only using this format:\n{"label": "<allowed label>"}\n'}]}, {'role': 'assistant', 'content': '{"label": "normal"}\n'}]}]
+
+
+
+
+
+
+It worked successfully. The tick and “6 seconds” mean the cell finished.
+
+MedGemma answered:
+{"label": "normal"}
+The two [transformers] lines are warnings, not errors. MedGemma currently defaults to greedy decoding, so this first result is still usable. We’ll clean up the settings later.
+
+Now extract the answer from the large output. Run:
+import json
+
+raw_response = output[0]["generated_text"][-1]["content"].strip()
+parsed_response = json.loads(raw_response)
+
+print("Raw response:", raw_response)
+print("Predicted label:", parsed_response["label"])
+You should get:
+Raw response: {"label": "normal"}
+Predicted label: normal
+Also check the uploaded image’s original folder or filename. Was it actually from the normal, benign, or malignant folder? That tells us whether this first prediction was correct.
+
+
+its wrong omg i had uploaded a benign
+
+
+
+
+
+
+That is okay—and scientifically useful. Your pipeline worked; MedGemma simply made an incorrect prediction.
+
+For this image:
+True label: benign lesion
+MedGemma prediction: normal
+Result: incorrect
+One wrong answer does not prove that the model is useless, just as one correct answer would not prove that it works reliably. That is exactly why the project tests many images and calculates statistics.
+
+Record this first result:
+first_result = {
+    "image_id": image_path.split("/")[-1],
+    "true_label": "benign lesion",
+    "predicted_label": parsed_response["label"],
+    "raw_response": raw_response,
+    "correct": parsed_response["label"] == "benign lesion",
+}
+
+print(first_result)
+You should see "correct": False.
+
+Also, do not change the prompt to make this particular image work. That would be tuning the prompt to an observed example. Later, you can improve the prompt using a designated development set—but never by repeatedly adjusting it around final test images.
+
+
+do i run that first
+
+
+
+
+
+
+Yes—run the selected code first. :codex-annotation{index="1"}
+import json
+
+raw_response = output[0]["generated_text"][-1]["content"].strip()
+parsed_response = json.loads(raw_response)
+
+print("Raw response:", raw_response)
+print("Predicted label:", parsed_response["label"])
+After it prints the predicted label, run the first_result code from my next message to record that the true label was benign and the prediction was wrong.
+
+
+do i record it for the literature review btw
+
+
+
+
+
+
+No—do not put this individual result in the literature review.
+
+The literature note summarizes what published papers say. It does not contain your experimental results.
+
+This first result belongs in your:
+- Colab output
+- Results table/CSV
+- Later experimental report, if it becomes a useful example
+For now, record it by running:
+first_result = {
+    "image_id": image_path.split("/")[-1],
+    "true_label": "benign lesion",
+    "predicted_label": parsed_response["label"],
+    "raw_response": raw_response,
+    "correct": parsed_response["label"] == "benign lesion",
+}
+
+print(first_result)
+Later, your literature note and results will be separate:
+- Literature note: What previous researchers discovered.
+- Results: What happened when you tested MedGemma.
+
+
+where do i record it btw?
+
+
+
+
+
+
+For now, record it inside the same 00_setup.ipynb Colab notebook.
+
+Run this in the next code cell:
+first_result = {
+    "image_id": image_path.split("/")[-1],
+    "true_label": "benign lesion",
+    "predicted_label": parsed_response["label"],
+    "raw_response": raw_response,
+    "correct": parsed_response["label"] == "benign lesion",
+}
+
+print(first_result)
+This saves the result temporarily in the notebook’s memory as first_result.
+
+Then save it as a small CSV file:
+import pandas as pd
+
+results_df = pd.DataFrame([first_result])
+results_df.to_csv("/content/first_medgemma_result.csv", index=False)
+
+results_df
+The file will appear in Colab’s left-side Files panel under:
+/content/first_medgemma_result.csv
+Important: /content/ is temporary and will disappear when the Colab session resets. After we confirm the CSV exists, the next step will be saving it permanently to Google Drive.
+
+
+i ran the import thing and got Raw response: {"label": "normal"}
+Predicted label: normal now
+
+
+
+
+
+
+Perfect. That confirms the JSON was extracted correctly.
+
+Now record the result by running:
+first_result = {
+    "image_id": image_path.split("/")[-1],
+    "true_label": "benign lesion",
+    "predicted_label": parsed_response["label"],
+    "raw_response": raw_response,
+    "correct": parsed_response["label"] == "benign lesion",
+}
+
+print(first_result)
+It should show something like:
+{
+  'image_id': 'benign (...).png',
+  'true_label': 'benign lesion',
+  'predicted_label': 'normal',
+  'raw_response': '{"label": "normal"}',
+  'correct': False
+}
+False is expected because the model misclassified this image.
+
+
+{'image_id': 'benign (1).png', 'true_label': 'benign lesion', 'predicted_label': 'normal', 'raw_response': '{"label": "normal"}', 'correct': False}
+
+
+
+
+
+
+Perfect. You have completed your first MedGemma inference and correctly recorded the mistake.
+
+Now save it as a CSV. Run:
+import pandas as pd
+
+results_df = pd.DataFrame([first_result])
+
+results_df.to_csv(
+    "/content/first_medgemma_result.csv",
+    index=False
+)
+
+results_df
+A table should appear below the cell, and first_medgemma_result.csv should appear in Colab’s Files panel. This file is temporary for now; we’ll save it permanently afterward.
+
+
+next? wait i just saved this file tho
+
+
+
+
+
+
+You saved the CSV, but currently it is in Colab’s temporary /content/ storage. It disappears when the session resets.
+
+Next, connect Google Drive:
+from google.colab import drive
+
+drive.mount("/content/drive")
+Run it, choose your Google account, and approve access. When successful, it will print:
+Mounted at /content/drive
+Your notebook itself is usually saved automatically, but this step lets us permanently save the dataset results.
+
+
+I already did that lmao
+
+
+
+
+
+
+Right—then skip mounting it. :codex-annotation{index="1"}
+
+Save the CSV permanently in your project Drive folder:
+from pathlib import Path
+
+results_folder = Path(
+    "/content/drive/MyDrive/Ultrasound_Project-Siyona/results/raw"
+)
+results_folder.mkdir(parents=True, exist_ok=True)
+
+csv_path = results_folder / "first_medgemma_result.csv"
+results_df.to_csv(csv_path, index=False)
+
+print("Saved permanently to:", csv_path)
+This creates the project and results folders automatically if they do not already exist.
+
+
+Drive already mounted at /content/drive; to attempt to forcibly remount, call drive.mount("/content/drive", force_remount=True).
+
+
+
+
+
+
+That message is normal—it only confirms Google Drive was already connected. You do not need to remount it.
+
+Now run this separate cell:
+from pathlib import Path
+
+results_folder = Path(
+    "/content/drive/MyDrive/Ultrasound_Project-Siyona/results/raw"
+)
+results_folder.mkdir(parents=True, exist_ok=True)
+
+csv_path = results_folder / "first_medgemma_result.csv"
+results_df.to_csv(csv_path, index=False)
+
+print("Saved permanently to:", csv_path)
+You should then see a message ending with:
+Ultrasound_Project-Siyona/results/raw/first_medgemma_result.csv
+
+
+where can i see it now
+
+
+
+
+
+
+Open Google Drive and follow:
+My Drive
+└── Ultrasound_Project-Siyona
+    └── results
+        └── raw
+            └── first_medgemma_result.csv
+You can also see it inside Colab:
+1. Open the left Files panel.
+2. Open drive.
+3. Open MyDrive.
+4. Open Ultrasound_Project-Siyona.
+5. Open results.
+6. Open raw.
+If the folder does not appear immediately, click the Refresh icon at the top of the Files panel.
+
+
+next
+
+
+
+
+
+
+Your first-image test is complete. Next, store the full BUSI dataset permanently.
+
+In Google Drive:
+1. Open Ultrasound_Project-Siyona.
+2. Create a folder named data.
+3. Inside it, create a folder named raw.
+4. Inside raw, create a folder named BUSI.
+5. Upload the BUSI .zip file you downloaded from Kaggle into that BUSI folder.
+Do not upload the extracted images individually—uploading the ZIP is faster. Tell me when the ZIP finishes uploading, and we’ll extract it using Colab.
+
+
+done
+
+
+
+
+
+
+Now find the ZIP’s exact filename. Run this in Colab:
+from pathlib import Path
+
+busi_folder = Path(
+    "/content/drive/MyDrive/Ultrasound_Project-Siyona/data/raw/BUSI"
+)
+
+for item in busi_folder.iterdir():
+    print(item.name)
+It should print the ZIP filename. Send me exactly what it prints.
+
+
+BUSI_dataset.zip
+
+
+
+
+
+
+Now extract the dataset. Run:
+from zipfile import ZipFile
+from pathlib import Path
+
+zip_path = Path(
+    "/content/drive/MyDrive/Ultrasound_Project-Siyona/data/raw/BUSI/BUSI_dataset.zip"
+)
+
+extract_folder = Path(
+    "/content/drive/MyDrive/Ultrasound_Project-Siyona/data/raw/BUSI/extracted"
+)
+
+extract_folder.mkdir(parents=True, exist_ok=True)
+
+with ZipFile(zip_path, "r") as zip_file:
+    zip_file.extractall(extract_folder)
+
+print("Dataset extracted to:", extract_folder)
+Wait until the tick appears. Extraction into Google Drive may take a few minutes.
+
+
+Dataset extracted to: /content/drive/MyDrive/Ultrasound_Project-Siyona/data/raw/BUSI/extracted
+
+
+
+
+
+
+Great. Now inspect the dataset and count the actual ultrasound images separately from the masks.
+
+Run:
+from pathlib import Path
+from collections import Counter
+
+all_pngs = list(extract_folder.rglob("*.png"))
+
+ultrasound_images = [
+    path for path in all_pngs
+    if "_mask" not in path.stem.lower()
+]
+
+mask_files = [
+    path for path in all_pngs
+    if "_mask" in path.stem.lower()
+]
+
+class_counts = Counter(
+    path.parent.name.lower()
+    for path in ultrasound_images
+)
+
+print("Ultrasound images:", len(ultrasound_images))
+print("Mask files:", len(mask_files))
+print("Images by folder:", class_counts)
+print("\nFirst five ultrasound images:")
+
+for path in ultrasound_images[:5]:
+    print(path)
+Send me the counts it prints.
+
+
+Ultrasound images: 780
+Mask files: 798
+Images by folder: Counter({'benign': 437, 'malignant': 210, 'normal': 133})
+
+First five ultrasound images:
+/content/drive/MyDrive/Ultrasound_Project-Siyona/data/raw/BUSI/extracted/Dataset_BUSI_with_GT/benign/benign (1).png
+/content/drive/MyDrive/Ultrasound_Project-Siyona/data/raw/BUSI/extracted/Dataset_BUSI_with_GT/benign/benign (10).png
+/content/drive/MyDrive/Ultrasound_Project-Siyona/data/raw/BUSI/extracted/Dataset_BUSI_with_GT/benign/benign (100).png
+/content/drive/MyDrive/Ultrasound_Project-Siyona/data/raw/BUSI/extracted/Dataset_BUSI_with_GT/benign/benign (101).png
+/content/drive/MyDrive/Ultrasound_Project-Siyona/data/raw/BUSI/extracted/Dataset_BUSI_with_GT/benign/benign (102).png
+
+
+
+
+
+
+Perfect—the dataset is complete:
+- 780 ultrasound images
+- 437 benign
+- 210 malignant
+- 133 normal
+- 798 masks
+There are more masks than images because some images have multiple lesion masks. That is normal.
+
+Next, create the dataset manifest: one row per ultrasound image, with its true label and matching mask files.
+import pandas as pd
+
+manifest_rows = []
+
+for image_path in ultrasound_images:
+    true_label = image_path.parent.name.lower()
+
+    matching_masks = sorted(
+        image_path.parent.glob(f"{image_path.stem}_mask*.png")
+    )
+
+    manifest_rows.append({
+        "image_id": image_path.name,
+        "true_label": true_label,
+        "image_path": str(image_path),
+        "number_of_masks": len(matching_masks),
+        "mask_paths": ";".join(str(path) for path in matching_masks),
+    })
+
+manifest_df = pd.DataFrame(manifest_rows)
+
+manifest_path = (
+    "/content/drive/MyDrive/Ultrasound_Project-Siyona/"
+    "data/busi_manifest.csv"
+)
+
+manifest_df.to_csv(manifest_path, index=False)
+
+print("Manifest rows:", len(manifest_df))
+print("Saved to:", manifest_path)
+
+manifest_df.head()
+You should get exactly Manifest rows: 780. This creates the list automatically—you do not manually label 780 images.
+
+
+what is manifest
+
+
+
+
+
+
+A manifest is simply a table listing everything in your dataset.
+
+Think of it as the dataset’s contents page or inventory.
+
+Each row represents one ultrasound image:
+image_id	true_label	image_path	number_of_masks	mask_paths
+benign (1).png	benign	/.../benign (1).png	1	/.../benign (1)_mask.png
+normal (1).png	normal	/.../normal (1).png	0	empty
+malignant (1).png	malignant	/.../malignant (1).png	1	/.../malignant (1)_mask.png
+
+
+It tells your code:
+- Which images exist
+- Where each image is stored
+- The correct label
+- Whether it has a mask
+- Where its mask is stored
+Later, instead of manually finding 780 images, your program reads the manifest and processes each row automatically.
+
+It does not alter the images. It only creates an organized CSV index named:
+busi_manifest.csv
+So yes—run the manifest code from the previous message.
+
+
+Worked for 14s
+
+
+
+I can see your notebook. Everything through dataset extraction and counting worked correctly.
+
+The last cell only shows:
+manifest_df.head()
+but I cannot see the manifest-creation code or its output. Run the manifest code I sent previously first; then manifest_df.head() will display its first five rows.
+
+If you already ran it, send me what Cell 13 displayed.
+
+
+
+
+
+
+
+
+
+
+
+Yes—that worked correctly.
+
+The screenshot confirms:
+- Exactly 780 manifest rows
+- Labels and image paths were recorded
+- Masks were linked correctly
+- benign (100).png has two masks, which is valid
+- The manifest was permanently saved as data/busi_manifest.csv
+You can ignore Generate code with manifest_df and New interactive sheet.
+
+Next, create a new Colab notebook named:
+01_data.ipynb
+We’ll use that notebook to load this manifest and create the fixed development/test split.
+
+
+but i didnt save it tho
+
+
+
+
+
+
+You did save the manifest—the code saved it automatically. Your screenshot confirms:
+Saved to: /content/drive/MyDrive/Ultrasound_Project-Siyona/data/busi_manifest.csv
+You can verify it in Google Drive:
+My Drive
+└── Ultrasound_Project-Siyona
+    └── data
+        └── busi_manifest.csv
+The table shown underneath is only a preview of the saved CSV.
+
+For the Colab notebook itself, click:
+File → Save
+or press Ctrl+S / Command+S. Colab usually autosaves the notebook to Google Drive.
+
+
+next
+
+
+
+
+
+
+Create a new Colab notebook:
+1. Click File → New notebook.
+2. Rename it:
+01_data.ipynb
+3. Connect it to the T4 GPU only if available—but this notebook does not actually require a GPU.
+4. Mount Google Drive in its first cell:
+from google.colab import drive
+
+drive.mount("/content/drive")
+Once it says Mounted at /content/drive, we’ll load the saved manifest.
+
+
+next
+
+
+
+
+
+
+Load the saved BUSI manifest. Run this in the next cell:
+import pandas as pd
+
+manifest_path = (
+    "/content/drive/MyDrive/Ultrasound_Project-Siyona/"
+    "data/busi_manifest.csv"
+)
+
+manifest_df = pd.read_csv(manifest_path)
+
+print("Manifest rows:", len(manifest_df))
+print("\nClass counts:")
+print(manifest_df["true_label"].value_counts())
+
+manifest_df.head()
+You should see:
+Manifest rows: 780
+
+benign       437
+malignant    210
+normal       133
+Tell me whether those numbers appear.
+
+
+yeah and theres a table below it
+
+
+
+
+
+
+Good. Now create a fixed 20-image development set for testing your code and keep the other 760 images untouched for the final experiment.
+
+Run:
+from sklearn.model_selection import train_test_split
+
+final_test_df, development_df = train_test_split(
+    manifest_df,
+    test_size=20,
+    stratify=manifest_df["true_label"],
+    random_state=42,
+)
+
+development_df = development_df.copy()
+final_test_df = final_test_df.copy()
+
+development_df["split"] = "development"
+final_test_df["split"] = "test"
+
+print("Development images:", len(development_df))
+print(development_df["true_label"].value_counts())
+
+print("\nUntouched test images:", len(final_test_df))
+print(final_test_df["true_label"].value_counts())
+Important: the 20 development images are where we can debug the prompt and code. Do not test or adjust the prompt using the other 760 images yet.
+
+
+what prompt? wdym prompt?
+
+
+
+
+
+
+The prompt is the written instruction you send to MedGemma with each image—the same text you used earlier:
+Classify this breast ultrasound image as exactly one of:
+normal, benign lesion, malignant lesion, or insufficient image quality.
+
+Return JSON only using this format:
+{"label": "<allowed label>"}
+Your code attaches this prompt to every ultrasound image.
+
+The 20-image development set lets you check:
+- Does MedGemma understand the instruction?
+- Does it return valid JSON?
+- Are the allowed labels clear?
+- Does your code save results properly?
+- Does the program crash on any images?
+If the output format is consistently broken, you may adjust the prompt while working on these 20 images.
+
+You must not repeatedly change the prompt after seeing results from the final 760-image test set. Otherwise, you would be adapting the experiment to the answers it is supposed to evaluate.
+
+For now, keep the prompt exactly as written and run the split-creation code.
+
+
+what does that code do with output Development images: 20
+true_label
+benign       11
+malignant     5
+normal        4
+Name: count, dtype: int64
+
+Untouched test images: 760
+true_label
+benign       426
+malignant    205
+normal       129
+Name: count, dtype: int64
+
+
+
+
+
+
+The code divided your 780 images into two groups:
+Development group: 20 images
+11 benign
+5 malignant
+4 normal
+You will use these 20 images first to check that:
+- MedGemma runs correctly
+- Your prompt works
+- JSON answers can be parsed
+- Results are saved properly
+You are allowed to fix code and formatting problems while using these images.
+Test group: 760 images
+426 benign
+205 malignant
+129 normal
+These are being held aside for the final evaluation. You should not run them yet or use their results to improve the prompt.
+
+The selection was:
+- Random
+- Reproducible because random_state=42
+- Stratified, meaning both groups retain approximately the same proportions of benign, malignant and normal images
+Nothing happened to the actual image files. The code only created two tables in the notebook’s memory. The next step is to save those tables permanently to Google Drive.
+
+
+okay next
+
+
+
+
+
+
+Save both split tables permanently to Google Drive:
+from pathlib import Path
+
+splits_folder = Path(
+    "/content/drive/MyDrive/Ultrasound_Project-Siyona/data/splits"
+)
+splits_folder.mkdir(parents=True, exist_ok=True)
+
+development_path = splits_folder / "busi_development_20.csv"
+test_path = splits_folder / "busi_test_760.csv"
+
+development_df.to_csv(development_path, index=False)
+final_test_df.to_csv(test_path, index=False)
+
+print("Saved development split to:", development_path)
+print("Saved test split to:", test_path)
+You should then find:
+Ultrasound_Project-Siyona
+└── data
+    └── splits
+        ├── busi_development_20.csv
+        └── busi_test_760.csv
+These files permanently freeze which images belong to each group.
+
+
+Saved development split to: /content/drive/MyDrive/Ultrasound_Project-Siyona/data/splits/busi_development_20.csv
+Saved test split to: /content/drive/MyDrive/Ultrasound_Project-Siyona/data/splits/busi_test_760.csv
+
+
+
+
+
+
+Great—the split is now frozen.
+
+Next, save the exact MedGemma prompt as a permanent text file:
+from pathlib import Path
+
+prompts_folder = Path(
+    "/content/drive/MyDrive/Ultrasound_Project-Siyona/prompts"
+)
+prompts_folder.mkdir(parents=True, exist_ok=True)
+
+classification_prompt = """Classify this breast ultrasound image as exactly one of:
+normal, benign lesion, malignant lesion, or insufficient image quality.
+
+Return JSON only using this format:
+{"label": "<allowed label>"}"""
+
+prompt_path = prompts_folder / "busi_classification_v1.txt"
+prompt_path.write_text(classification_prompt, encoding="utf-8")
+
+print("Prompt saved to:", prompt_path)
+print("\nSaved prompt:\n")
+print(classification_prompt)
+This ensures every image receives exactly the same instruction, and records the precise prompt used in the experiment.
+
+
+Prompt saved to: /content/drive/MyDrive/Ultrasound_Project-Siyona/prompts/busi_classification_v1.txt
+
+Saved prompt:
+
+Classify this breast ultrasound image as exactly one of:
+normal, benign lesion, malignant lesion, or insufficient image quality.
+
+Return JSON only using this format:
+{"label": "<allowed label>"}
+
+okay, do i also save the prompts elsewhere safe side
+
+
+
+
+
+
+Google Drive is sufficient for now. The prompt is already stored permanently at:
+Ultrasound_Project-Siyona/prompts/busi_classification_v1.txt
+Later, when you create the Git repository, copy the entire prompts folder into it. That will provide a second version-controlled backup.
+
+Avoid creating several loose copies now because they can become inconsistent. If you revise the prompt during development, save a new version:
+busi_classification_v2.txt
+Never overwrite v1; this preserves exactly what changed. Your notebook also currently contains the prompt, giving you an additional reference.
+
+
+okay true, next step
+
+
+
+
+
+
+Now create the inference notebook:
+1. Click File → New notebook.
+2. Rename it:
+02_inference.ipynb
+3. Select:
+Runtime → Change runtime type → T4 GPU → Save
+4. In the first cell, mount Drive:
+from google.colab import drive
+
+drive.mount("/content/drive")
+This notebook will load MedGemma and automatically process the 20 development images.
+
+
+are we still doing week 1 stuff?
+
+
+
+
+
+
+You have essentially completed the practical Week 1 setup:
+- Colab and T4 GPU work
+- Hugging Face access works
+- MedGemma loads
+- One MedGemma inference was reproduced
+- BUSI was downloaded and organised
+- The 780-image manifest was created
+You still need the one-page literature note to fully complete Week 1.
+
+The work we just completed—fixed splits and a versioned prompt—is technically the beginning of Week 2.
+
+So your current status is:
+Week 1: almost complete
+Week 2: already started
+Before creating 02_inference.ipynb, I recommend finishing the one-page literature note so Week 1 is formally complete.
+
+
+can we focus on week 1 tbh, cuz I havent actually crated the one page literature note. look at the evidenc of completeion, tell me what all do i send my mentor
+
+
+
+
+
+
+For Week 1, the briefing requires exactly three main pieces of evidence:
+1. One-page literature note
+2. Colab setup notebook
+3. Dataset manifest
+You should send your mentor one folder or Drive link containing the following.
+1. One-page literature note
+Suggested filename:
+Week_1_Literature_Note.pdf
+It should briefly cover:
+- What MedGemma is
+- What BUSI and CAMUS are
+- Why ultrasound is challenging for vision-language models
+- Why testing image quality and refusal is important
+- How the papers influenced your planned experiment
+- References to the papers you reviewed
+This is the main Week 1 item you have not completed yet.
+2. Colab setup notebook
+Send a view-only Colab link to:
+00_setup.ipynb
+It should demonstrate that:
+- T4 GPU was detected
+- Required libraries were installed
+- Hugging Face login worked
+- MedGemma loaded successfully
+- One BUSI image was displayed
+- MedGemma processed the image
+- Its JSON response was extracted
+- The result was recorded
+Your first incorrect prediction is still valid evidence. The goal was to reproduce one inference, not necessarily obtain a correct prediction.
+
+Before sharing the notebook:
+- Remove any unnecessary failed or duplicate cells.
+- Make sure your Hugging Face token is not visible anywhere.
+- Keep the output showing the username if you want, but the token must never appear.
+- Save the notebook.
+- Set the Drive link to Viewer, not Editor.
+3. BUSI dataset manifest
+Send:
+busi_manifest.csv
+Your manifest already contains:
+- 780 image records
+- Correct class labels
+- Image locations
+- Number of masks
+- Matching mask locations
+It is saved here:
+Ultrasound_Project-Siyona/data/busi_manifest.csv
+You do not need to send all 780 ultrasound images unless your mentor specifically requests them. The manifest proves that you acquired and organised the dataset.
+Useful optional evidence
+You may also include:
+first_medgemma_result.csv
+This shows:
+True label: benign lesion
+Prediction: normal
+Correct: False
+It is optional because the inference is already visible in the notebook, but it demonstrates that you started structured result logging.
+
+You can also include a short Week_1_README.txt containing:
+Week 1 completed:
+- BUSI downloaded and verified: 780 images
+- BUSI manifest created
+- MedGemma 1.5 4B loaded in Google Colab using 4-bit quantisation
+- One inference completed and recorded
+- One-page literature note attached
+
+Initial inference:
+- Image: benign (1).png
+- Ground-truth label: benign
+- Model prediction: normal
+- This single result is only a pipeline test, not a performance conclusion
+Do not send
+- Your Hugging Face token
+- Your Kaggle credentials
+- Editable access to the entire Google Drive
+- The BUSI ZIP unless requested
+- The incomplete Week 2 split files as Week 1 deliverables
+- Claims about model accuracy based on one image
+Your Week 1 mentor package
+Week_1_Submission/
+├── Week_1_Literature_Note.pdf
+├── busi_manifest.csv
+├── first_medgemma_result.csv       optional
+├── Week_1_README.txt               optional
+└── 00_setup.ipynb or view-only Colab link
+So, at present:
+- 00_setup.ipynb — completed, but needs cleanup before sharing
+- busi_manifest.csv — completed
+- One-page literature note — still required
+- First inference CSV — completed and optional
+These match the Week 1 evidence listed in the project briefing. :codex-file-citation{path="/Users/siyonanaik/Desktop/UltrasoundVSC/Ultrasound_VLM_UGE_Project_Brief_edited.docx" purpose="source"}
+
+
+i didnt really get the literature note, like i am supposed to write in my own words what i understood?
+
+
+
+
+
+
+Yes, exactly. The literature note is a one-page explanation, in your own words, of what you learned from the important papers and how it relates to your project.
+
+It is not:
+- A copy of the paper abstracts
+- A detailed essay about every experiment
+- Your MedGemma results
+- A review of all the code you wrote
+It should answer four simple questions:
+1. What did I read?
+2. What did the researchers investigate?
+3. What were the important findings or limitations?
+4. How does this affect my project?
+A straightforward structure is:
+Literature Note on VLM Evaluation for Ultrasound
+Project background
+Write approximately one paragraph:
+Vision-language models can process images together with written instructions. MedGemma is designed for medical image and text tasks, but its ability to interpret ultrasound images must be tested carefully. Ultrasound images can be difficult because their appearance depends on image quality, probe position, anatomy and acoustic artefacts. This project will therefore examine both whether MedGemma classifies ultrasound findings correctly and whether it recognises when an image is inadequate.
+
+Papers reviewed
+Write a short paragraph for each paper. For example:
+Sellergren et al., MedGemma Technical Report: This paper introduces MedGemma and describes its medical image and text capabilities. I understood that the model is intended as a foundation for medical AI research rather than a clinically approved diagnostic system. Its performance must therefore be independently evaluated on the specific dataset and task where it will be used.
+
+Then do the same for the most relevant ultrasound and dataset papers:
+- U2-BENCH ultrasound VLM paper
+- Ultrasound instruction dataset/benchmark paper
+- BUSI dataset paper
+- CAMUS dataset paper
+You do not need to explain every equation or model architecture.
+What I learned
+Write a short paragraph such as:
+The literature suggests that medical VLMs may contain useful medical knowledge, but correct-looking individual answers do not prove that they are reliable. Ultrasound is particularly challenging because poor image quality or incomplete views can hide important structures. A model should therefore be evaluated not only on classification accuracy, but also on localisation, confidence, failure cases and whether it refuses to answer when image quality is inadequate.
+
+Connection to my project
+Finish with something like:
+Based on these papers, I will use fixed prompts and fixed dataset splits rather than selecting only successful examples. BUSI will be used for breast-ultrasound classification and lesion localisation, while CAMUS will provide an external test involving cardiac views and expert-marked image quality. I will preserve raw model responses and report errors and limitations without making clinical diagnostic claims.
+
+The writing should sound like you. It is fine to use simple language such as:
+“What I understood from this paper was…”
+
+The important part is demonstrating understanding, not sounding highly technical. Also include a small reference list at the bottom with the papers’ titles, authors and years.
+
+
+Okay so i think i need to do some research for that first then write, then send the dataset manifest, the first medgemma result, and the colab link for setup with viewer access correct?
+
+
+
+
+
+
+Correct. Your Week 1 submission should contain:
+- A one-page literature note written after reading the key papers
+- busi_manifest.csv
+- first_medgemma_result.csv
+- A viewer-access link to 00_setup.ipynb
+Before sharing the Colab notebook:
+- Confirm no Hugging Face token is visible.
+- Remove unnecessary failed or duplicate cells if possible.
+- Keep the MedGemma loading and first-inference outputs.
+- Add short text headings so your mentor can follow it.
+- Ensure the notebook is saved.
+- Test the viewer link in a private/incognito window.
+For the literature note, start with the five papers listed in the briefing. You do not need to read every word immediately. Focus on:
+- Abstract
+- Introduction
+- Dataset or methods section relevant to your project
+- Main results
+- Limitations and conclusion
+Take short notes under:
+What was studied?
+What data/model was used?
+What did they find?
+What limitation matters to my project?
+Then convert those notes into your one-page summary. Your understanding should drive the note; don’t copy the abstracts.
+
+
+what are some key papers btw
+
+
+
+
+
+
+Worked for 52s
+
+
+
+For a one-page note, focus on these five papers from your project brief. You do not need to read all of them line by line.
+Read these three first
+1. MedGemma Technical Report — Sellergren et al., 2025
+   Focus on:
+   - What MedGemma is
+   - Medical image capabilities
+   - How it was evaluated
+   - Limitations and warnings about clinical use
+   Because you are using MedGemma 1.5 specifically, also glance at the newer MedGemma 1.5 Technical Report, especially its image interpretation and bounding-box capabilities.
+2. U2-BENCH: Benchmarking Large Vision-Language Models on Ultrasound Understanding — Le et al., 2025
+   This is probably the most directly relevant paper. Focus on:
+   - Why ultrasound is difficult for VLMs
+   - The types of tasks tested
+   - Classification versus localisation performance
+   - Where the tested models struggled
+3. Dataset of Breast Ultrasound Images — Al-Dhabyani et al., 2020
+   Focus on:
+   - Where BUSI came from
+   - The number of images and patients
+   - Normal, benign and malignant categories
+   - What the masks represent
+   - Dataset limitations
+Then read these two
+4. Deep Learning for Segmentation Using an Open Large-Scale Dataset in 2D Echocardiography — Leclerc et al., 2019
+   This introduces CAMUS. Focus on:
+   - What CAMUS contains
+   - A2C and A4C views
+   - End-diastolic and end-systolic frames
+   - Expert annotations and image-quality information
+   - Why CAMUS is useful as an external dataset
+5. A Multimodal Instruction Dataset and Benchmark for Ultrasound Understanding — Wang et al., 2026
+   Focus on:
+   - Why general-purpose VLMs struggle with ultrasound
+   - What an ultrasound instruction dataset is
+   - How ultrasound understanding was evaluated
+   - The remaining limitations
+Efficient reading method
+For each paper, read only:
+1. Abstract
+2. First part of the introduction
+3. Dataset or evaluation section relevant to your project
+4. Main results
+5. Limitations or conclusion
+Take notes using this template:
+Paper title:
+
+What problem does it study?
+
+What model or dataset does it use?
+
+What is its main finding?
+
+What limitation is relevant to my project?
+
+How does it influence my experiment?
+For example, after reading U2-BENCH, you might write:
+The paper evaluates vision-language models on several ultrasound
+tasks. I understood that models may perform reasonably on some
+classification tasks but still struggle with spatial localisation.
+This supports evaluating classification and bounding-box grounding
+separately in my project.
+Aim for two or three useful sentences per paper. After that, you can combine your notes into the one-page literature note.
+
+
+1. Sellergren et al., MedGemma Technical Report, 2025.
+2. Le et al., U2 BENCH Benchmarking Large Vision Language Models on Ultrasound Understanding, 2025.
+3. Wang et al., A Multimodal Instruction Dataset and Benchmark for Ultrasound Understanding, 2026.
+4. Leclerc et al., Deep Learning for Segmentation using an Open Large Scale Dataset in 2D Echocardiography, IEEE TMI, 2019.
+5. Al Dhabyani et al., Dataset of Breast Ultrasound Images, Data in Brief, 2020.
+give me links for the above
+
+
+
+
+
+
+1. Sellergren et al., MedGemma Technical Report, 2025
+   Read on arXiv · Download PDF
+2. Le et al., U2-BENCH: Benchmarking Large Vision-Language Models on Ultrasound Understanding, 2025
+   Read on arXiv · Download PDF
+3. Wang et al., A Multimodal Instruction Dataset and Benchmark for Ultrasound Understanding, 2026
+   Read on PubMed · Journal article
+4. Leclerc et al., Deep Learning for Segmentation Using an Open Large-Scale Dataset in 2D Echocardiography, 2019
+   Read on PubMed · Read on arXiv · Download PDF
+5. Al-Dhabyani et al., Dataset of Breast Ultrasound Images, 2020
+   Read the journal article · Official dataset page
+
+
+wait btw i renamed the setup to 00_setup
+
+
+
+
+
+
+That’s correct. The intended filename is:
+00_setup.ipynb
+It matches the notebook structure required in the briefing. Use this renamed notebook when sharing the viewer-access Colab link with your mentor.
+
+
+it was 00setup og, am i cooked
+
+
+
+
+
+
+No, you’re completely fine. Renaming it from:
+00setup.ipynb
+to:
+00_setup.ipynb
+does not affect the notebook’s code, outputs, files, or Drive connection. The new name is actually better because it matches the project brief.
+
+
+currently in the one note literature i have written the following:&#x20;
+In this Ultrasound Project, we aim to test whether Vision Language Models like Google’s MedGemma work on ultrasound images. According to the MedGemm&#x61;&#x20;&#x54;echnical Report, MedGemma’s underlying vision engine - MedSigLIP was pretrained on over 33 million medical image-text pairs. However, this data was strictly limited to specific medical modalities like Chest X-rays, 3D CT scans, and MRIs. 
+Qwen3-VL-2B-Sono, trained on the dataset SonoInstruct, is a VLM used specifically for Ultrasound. It is a fine-tuned model. However, in this project, we first aim to zero shot using MedGemma.
+The primary bottleneck in medical visual grounding is not model scale alone but the absence of specialized super-vision that explicitly aligns textual instructions with sonographic anatomy at a perceptual level (A multimodal instruction dataset and benchmark for ultrasound understanding , 2026&#x20;).
+
+
+
+
+
+
+Worked for 26s
+
+
+
+You have the right ideas, but two technical points need correcting:
+- MedSigLIP was trained on over 33 million medical image-text pairs, but these were not limited to chest X-rays, CT and MRI. The training mixture also included histopathology, dermatology, ophthalmology and general medical images. Ultrasound was not listed as a dedicated training modality in the 2025 report. MedGemma Technical Report
+- The word is supervision, not “super-vision.” That final sentence is also quite dense and sounds more like paper language than your own explanation.
+A clearer revision would be:
+In this ultrasound project, we aim to test whether a medical vision-language model such as Google’s MedGemma can interpret ultrasound images reliably. According to the MedGemma Technical Report, MedGemma uses a medically adapted vision encoder called MedSigLIP. This encoder was trained using more than 33 million medical image-text pairs. Most of these were histopathology patches, with additional images from areas including radiology, dermatology and ophthalmology. However, ultrasound was not listed as a dedicated training modality, so MedGemma’s ability to interpret ultrasound images still needs to be evaluated.
+
+Wang et al. introduced SonoInstruct, a large ultrasound-specific instruction dataset, and used it to fine-tune a model called Qwen3-VL-2B-Sono. This showed that ultrasound-specific training can improve a general vision-language model’s ultrasound understanding. In our project, however, we will initially evaluate MedGemma using zero-shot prompting. This means that we will ask MedGemma to classify ultrasound images without first training it on our BUSI images.
+
+What I understood from the paper is that increasing model size alone may not solve ultrasound-understanding problems. Models also need suitable ultrasound examples that connect written instructions with the relevant anatomy in the image. This is important because ultrasound images can be noisy, difficult to interpret and highly dependent on image quality.
+
+One more distinction: the 2025 report describes the original MedGemma, while your experiment uses MedGemma 1.5 4B. You can say:
+The project uses the newer MedGemma 1.5 4B model, while the original MedGemma report provides background on the model family and its medical vision encoder.
+
+Your note is going in the right direction. Continue by adding a paragraph about U2-BENCH, followed by short paragraphs explaining why BUSI and CAMUS were chosen.
+
+
+what else can i write
+
+
+
+
+
+
+Add three short sections: what U2-BENCH found, why you are using BUSI and CAMUS, and what the literature means for your experiment.
+U2-BENCH and ultrasound difficulties
+You could write:
+The U2-BENCH study evaluated 20 vision-language models on ultrasound tasks involving classification, view recognition, lesion localisation and report generation. The study found that some models performed reasonably well on image-level classification but continued to struggle with spatial reasoning and clinical text generation. I understood from this that correctly naming a condition does not necessarily mean that a model can locate the relevant feature or explain the image reliably. This is why our project evaluates classification and lesion localisation separately. U2-BENCH
+
+Why BUSI is being used
+You could write:
+The BUSI dataset contains 780 breast-ultrasound images divided into normal, benign and malignant categories. The benign and malignant images also include expert-created segmentation masks that indicate the lesion location. BUSI is therefore useful for testing two different capabilities: whether MedGemma predicts the correct image category and whether it can locate the lesion. One limitation is that the available files do not provide clear patient identifiers, which makes it difficult to guarantee a patient-level data split. BUSI paper
+
+The last sentence connects directly to the limitation you encountered when creating the split.
+Why CAMUS is being used
+You could write:
+CAMUS contains echocardiography data from 500 patients, including apical two-chamber and four-chamber views. It also provides end-diastolic and end-systolic frames and expert annotations. Although the original CAMUS paper focuses mainly on cardiac segmentation, the dataset gives this project a way to test MedGemma on a different organ and ultrasound task. This can show whether its performance extends beyond breast ultrasound and whether poor image quality affects its answers. CAMUS paper
+
+What you concluded from the literature
+Finish with your own conclusion:
+Overall, the papers suggest that medical vision-language models may be useful for ultrasound analysis, but their reliability cannot be judged from a few successful examples. A model may classify an image correctly while still locating the wrong structure, producing an unsupported explanation or answering confidently when the image is unclear. Based on this literature, our project will use fixed prompts and dataset splits, preserve every raw response and measure classification, localisation and failure to abstain. The results will be treated as a research evaluation rather than evidence that MedGemma is ready for clinical diagnosis.
+
+A suitable one-page order would be:
+1. Your project and MedGemma
+2. SonoInstruct and ultrasound-specific training
+3. U2-BENCH findings
+4. BUSI and CAMUS
+5. What these papers mean for your experiment
+6. A compact reference list
+Keep only the most important points so the document remains approximately one page. Rewrite the example passages slightly in your natural voice rather than copying them unchanged.
+
+
+So the prompt you used also you can add in the csv document
+
+what prompt ah? for the first medgemma result right
+
+
+
+
+
+
+Yes—your mentor likely means the exact classification prompt used for the first MedGemma result.
+
+The prompt was:
+Classify this breast ultrasound image as exactly one of:
+normal, benign lesion, malignant lesion, or insufficient image quality.
+
+Return JSON only using this format:
+{"label": "<allowed label>"}
+Add it as a prompt column in first_medgemma_result.csv. In 00_setup.ipynb, run:
+first_result["prompt"] = PROMPT.strip()
+
+results_df = pd.DataFrame([first_result])
+results_df.to_csv(
+    "/content/drive/MyDrive/Ultrasound_Project-Siyona/results/raw/first_medgemma_result.csv",
+    index=False
+)
+
+results_df
+This overwrites the earlier CSV with an updated version containing the prompt. The file will now record:
+- Image
+- Correct label
+- Predicted label
+- Raw response
+- Whether the prediction was correct
+- Exact prompt sent to MedGemma
+
+
+Okay, I sent her the following:
+
+Week 1 Deliverables: 
+Colab Setup (The link currently has viewer access only, do I allow editor access?): https://colab.research.google.com/drive/1YVaAuVLDWosjFo9OD2-bn4X9F_-0j9hz?usp=sharing 
+
+One Page Literature Review and Dataset Manifest(BUSI):  
+Ultrasound_LiteratureReview.pdf
+busi_manifest.csv
+
+Tried testing the model on one ultrasound image from BUSI dataset:
+first_medgemma_result.csv
+
+shall we move on to week 2?
+
+
+
+
+
+
+Yes—you can move on to Week 2. Your Week 1 submission covers all required evidence, plus the optional first-result CSV.
+
+Keep the Colab notebook on viewer access. Give editor access only if your mentor specifically asks to modify the notebook. Viewer access prevents accidental changes while still allowing her to read, run a copy, and review your work.
+Week 2 objective
+The briefing requires:
+Create fixed splits, prompts and output schema.
+
+Evidence required:
+- Versioned prompt file
+- A 20-image dry run
+You have already completed:
+- busi_development_20.csv
+- busi_test_760.csv
+- busi_classification_v1.txt
+What remains:
+1. Define the full results-table schema.
+2. Create 02_inference.ipynb.
+3. Load MedGemma reproducibly.
+4. Run the 20 development images.
+5. Save every raw response and parsed result.
+6. Check how many outputs are valid JSON.
+7. Save the 20-image dry-run CSV.
+8. Do not run the 760-image test set yet.
+Your Week 2 deliverables should eventually look like:
+data/splits/
+├── busi_development_20.csv
+└── busi_test_760.csv
+
+prompts/
+└── busi_classification_v1.txt
+
+results/dry_run/
+└── busi_development_20_medgemma.csv
+
+notebooks/
+├── 01_data.ipynb
+└── 02_inference.ipynb
+We can now continue one step at a time. Start by creating a new Colab notebook named:
+02_inference.ipynb
+Set it to a T4 GPU and mount Google Drive.
+
+
+last step in Week 2 colab is, from pathlib import Path
+
+prompts_folder = Path(
+    "/content/drive/MyDrive/Ultrasound_Project-Siyona/prompts"
+)
+prompts_folder.mkdir(parents=True, exist_ok=True)
+
+classification_prompt = """Classify this breast ultrasound image as exactly one of:
+normal, benign lesion, malignant lesion, or insufficient image quality.
+
+Return JSON only using this format:
+{"label": "<allowed label>"}"""
+
+prompt_path = prompts_folder / "busi_classification_v1.txt"
+prompt_path.write_text(classification_prompt, encoding="utf-8")
+
+print("Prompt saved to:", prompt_path)
+print("\nSaved prompt:\n")
+print(classification_prompt)
+
+Prompt saved to: /content/drive/MyDrive/Ultrasound_Project-Siyona/prompts/busi_classification_v1.txt
+
+Saved prompt:
+
+Classify this breast ultrasound image as exactly one of:
+normal, benign lesion, malignant lesion, or insufficient image quality.
+
+Return JSON only using this format:
+{"label": "<allowed label>"}
+
+next what to do
+
+
+
+
+
+
+That completes the data preparation portion in 01_data.ipynb.
+
+Next:
+1. Save 01_data.ipynb.
+2. Create a new Colab notebook named:
+02_inference.ipynb
+3. Enable:
+Runtime → Change runtime type → T4 GPU
+4. Run the first cell:
+from google.colab import drive
+
+drive.mount("/content/drive")
+This new notebook will load the saved 20-image development split, load MedGemma, and perform the dry run. Tell me once Drive is mounted.
+
+
+mounted
+
+
+
+
+
+
+Now install the required packages in 02_inference.ipynb:
+!pip -q install -U transformers accelerate bitsandbytes huggingface_hub pillow pandas
+When the cell finishes, restart the session:
+Runtime → Restart session
+This prevents the Pillow import error you encountered previously. After restarting, rerun only the Drive-mount cell, then tell me when it is mounted again.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 79.5/79.5 kB 918.9 kB/s eta 0:00:00
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 12.8/12.8 MB 41.9 MB/s eta 0:00:00
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 43.1/43.1 MB 21.2 MB/s eta 0:00:00
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 839.9/839.9 kB 62.8 MB/s eta 0:00:00
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 7.1/7.1 MB 42.9 MB/s eta 0:00:00
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 10.8/10.8 MB 54.2 MB/s eta 0:00:00
+ERROR: pip's dependency resolver does not currently take into account all the packages that are installed. This behaviour is the source of the following dependency conflicts.
+google-colab 1.0.0 requires pandas==2.2.3, but you have pandas 3.0.6 which is incompatible.
+cudf-cu13 26.6.0 requires pandas<2.4.0,>=2.0, but you have pandas 3.0.6 which is incompatible.
+gradio 6.30.0 requires pillow<13.0,>=8.0, but you have pillow 13.0.0 which is incompatible.
+dask-cudf-cu13 26.6.0 requires pandas<2.4.0,>=2.0, but you have pandas 3.0.6 which is incompatible.
+datasets 4.8.5 requires huggingface-hub<2.0,>=0.25.0, but you have huggingface-hub 2.2.0 which is incompatible.
+diffusers 0.41.0 requires huggingface-hub<2.0,>=1.32.0, but you have huggingface-hub 2.2.0 which is incompatible.
+
+
+
+
+
+
+The installation completed, but -U upgraded three packages beyond Colab’s compatible versions. Fix them before restarting.
+
+Run:
+!pip -q install \
+  "pandas==2.2.3" \
+  "pillow<13" \
+  "huggingface_hub>=1.32,<2.0"
+Then select:
+Runtime → Restart session
+After restarting, rerun the Drive-mount cell. These were dependency warnings, not damage to your Drive files or project.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 89.9/89.9 kB 828.4 kB/s eta 0:00:00
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 12.7/12.7 MB 41.1 MB/s eta 0:00:00
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 6.9/6.9 MB 63.0 MB/s eta 0:00:00
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 846.4/846.4 kB 56.1 MB/s eta 0:00:00
+now?
+
+
+
+
+
+
+Now restart the Colab session:
+Runtime → Restart session → Confirm
+After the restart, rerun the Drive-mount cell:
+from google.colab import drive
+
+drive.mount("/content/drive")
+Then run this verification cell:
+import pandas
+import PIL
+import huggingface_hub
+import transformers
+
+print("pandas:", pandas.__version__)
+print("Pillow:", PIL.__version__)
+print("huggingface_hub:", huggingface_hub.__version__)
+print("transformers:", transformers.__version__)
+Send me the versions it prints.
+
+
+pandas: 2.2.3
+Pillow: 12.3.0
+huggingface_hub: 1.33.0
+transformers: 5.20.2
+
+
+
+
+
+
+pandas: 2.2.3
+Pillow: 12.3.0
+huggingface_hub: 1.33.0
+transformers: 5.20.2

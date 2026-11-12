@@ -1,0 +1,2 @@
+total_images,correct_predictions,incorrect_predictions,valid_json_rate,average_latency_seconds,model_name,model_revision
+20,5,15,100,3.02,google/medgemma-1.5-4b-it,91850547d9f0b2fdd21aa7c5f4f3d1a8a52c243b

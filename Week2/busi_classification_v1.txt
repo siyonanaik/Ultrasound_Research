@@ -1,0 +1,5 @@
+Classify this breast ultrasound image as exactly one of:
+normal, benign lesion, malignant lesion, or insufficient image quality.
+
+Return JSON only using this format:
+{"label": "<allowed label>"}
